@@ -1,0 +1,126 @@
+import random
+import os
+
+GAME_QUESTION_COUNT = 5
+
+def get_questions(fname):
+    with open(fname) as f:
+        return f.readlines()
+
+def generate_indexes(questions):
+    index = []
+    while len(index) < GAME_QUESTION_COUNT:
+        ind = random.randint(0, len(questions) - 1)
+        if ind not in index:
+            index.append(ind)
+    return index
+def get_indexes(questions):
+    game_questions = [questions[ind] for ind in generate_indexes(questions)]
+    return game_questions
+def modify_questions(game_questions):
+    qdict = {}
+    for question in game_questions:
+        q, a = question.replace("\n", "").split("?")
+        qdict[q] = a.split(",")
+    return qdict
+def play(qdict):
+    count = 0
+    for q, a in qdict.items():
+        print(q + "?")
+        correct = a[0]
+        random.shuffle(a)
+        for el in a:
+            print(el)
+        answer = input("Please enter your answer: ")
+        if correct.lower() == answer.lower():
+            count += 1
+            print("Correct")
+        else:
+            print("Incorrect. The correct was", correct)
+
+    print("You got %d/%d" % (count, GAME_QUESTION_COUNT))
+    return count
+
+def collect_question():
+    tmp = []
+    while True:
+        q = input("Enter the question: ")
+        a1 = input("Enter correct answer: ")
+        a2 = input("Enter second variant: ")
+        a3 = input("Enter third variant: ")
+        a4 = input("Enter fourth variant: ")
+        full_question = "%s?%s,%s,%s,%s" % (q, a1, a2, a3, a4)
+        tmp.append(full_question)
+        cont = input("Would you like add more: y/n")
+        if cont.lower() == 'n':
+            return tmp
+
+def write_question_file(fname, ml):
+    with open(fname, "a+") as f:
+        for q in ml:
+            f.write(q + "\n")
+
+def get_players(fname):
+    with open(fname) as f:
+        cnt = f.readlines()
+    md = {}
+    for line in cnt:
+        tmp = line.replace("\n", "").split(": ")
+        md[tmp[0]] = int(tmp[1])
+    return md
+
+def write_into_players_file(fname, player_list):
+    with open(fname, "w") as f:
+        for u, c in player_list:
+            f.write(u + ": " + str(c) + "\n")
+
+def create_player_folder(player_name):
+    folder_path = os.path.join("players", player_name)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    return folder_path
+
+def handle_duplicate_names(players_dict, username):
+    original_username = username
+    suffix = 1
+    while username in players_dict:
+        username = f"{original_username}{suffix}"
+        suffix += 1
+    return username
+
+def save_player_results(username, score):
+    folder = create_player_folder(username)
+    result_file = os.path.join(folder, "results.txt")
+    with open(result_file, "a") as f:
+        f.write(f"Score: {score} at {os.path.getctime(result_file)}\n")
+
+def main():
+    question_file = "questions.txt"
+    mode = input("Would you like to add question or play: q/p ")
+    if mode.lower() == 'q':
+        ml = collect_question()
+        write_question_file(question_file, ml)
+    elif mode.lower() == 'p':
+        username = input("Enter your username: ")
+        players_file = "top.txt"
+        players_dict = {}
+
+        
+        if os.path.isfile(players_file):
+            players_dict = get_players(players_file)
+        username = handle_duplicate_names(players_dict, username)
+        questions = get_questions(question_file)    
+        gquestions = get_indexes(questions)
+        qdictionary = modify_questions(gquestions)
+        count = play(qdictionary)
+        players_dict[username] = count
+        ml = list(players_dict.items())    
+        ml.sort(key=lambda x: x[1], reverse=True)
+        write_into_players_file(players_file, ml)
+        save_player_results(username, count)
+
+    else:
+        print("No such mode")
+
+if name == 'main':
+    main()
